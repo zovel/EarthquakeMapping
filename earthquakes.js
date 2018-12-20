@@ -1,49 +1,52 @@
 
-//Store our API endpoint inside queryUrl
+// Store our API endpoint inside queryUrl
 var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
-// "2014-01-02&maxlongitude=-69.52148437&minlongitude=-123.83789062&maxlatitude=48.74894534&minlatitude=25.16517337";
 
 // Perform a GET request to the query URL
-d3.json(queryUrl, function (data) {
-  // Once we get a response, send the data.features object to the createFeatures function
+d3.json(queryUrl, function(data) {
   createFeatures(data.features);
 });
 
 function createFeatures(earthquakeData) {
-  var magnitudes = feature.properties.mag;
-  var location = feature.properties.place;
-  var mag_markers = [];
-  for (var i = 0; i < magnitudes.length; i++) {
-    var color = "";
-    if (magnitudes = 1.0 < 2.5) {
-      color = "yellow";
+
+    var earthquakes = [];
+
+    for (var i =0; i < earthquakeData.length; i++) {
+
+        earthquakes.push(
+            L.circle([earthquakeData[i].geometry.coordinates[1], earthquakeData[i].geometry.coordinates[0]], {
+                stroke: false,
+                fillOpacity:0.75,
+                color: colors(earthquakeData[i].properties.mag),
+                fillColor : colors(earthquakeData[i].properties.mag),
+                radius: (earthquakeData[i].properties.mag)*30000
+            }).bindPopup(("<h3>" + earthquakeData[i].properties.place +
+            "</h3><hr><p>" + new Date(earthquakeData[i].properties.time) + "</p>"))
+        )
     }
-    else if (magnitudes = 2.5 < 4.5) {
-      color = "orange";
-    }
-    else {
-      color = "red";
-    }
-  }
-  function onEachFeature(location, magnitudes) {
-    L.circle(location, {
-      fillOpacity: 0.75,
-      color: "white",
-      fillColor: color,
-      radius: magnitudes
-    }).bindPopup("<h3" > + location +
-      "</h3><hr><p>" + magnitudes + "</p>").push(mag_markers);
-  }
+
   // Create a GeoJSON layer containing the features array on the earthquakeData object
   // Run the onEachFeature function once for each piece of data in the array
-  var earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature
-  });
+//   var earthquakes = L.geoJSON(earthquakeData, {
+//     onEachFeature: onEachFeature
+//   });
+    var earthquake_layer = L.layerGroup(earthquakes);
+
+  // Sending our earthquakes layer to the createMap function
+  createMap(earthquake_layer);
 }
 
-
-// Sending our earthquakes layer to the createMap function
-createMap(earthquakes);
+function colors(mag) {
+    if (mag>3) {
+        var color = "red";
+    }
+    else if (mag>1) {
+        var color = "orange";
+    }
+    else {
+        var color = "yellow"}
+    return color;
+}
 
 function createMap(earthquakes) {
 
@@ -89,4 +92,24 @@ function createMap(earthquakes) {
     collapsed: false
   }).addTo(myMap);
 
+
+var legend = L.control({position: 'bottomright'});
+
+legend.onAdd = function (myMap) {
+
+    var div = L.DomUtil.create('div', 'info legend'),
+    grades = [0, 1, 3],
+    labels = ["yellow", "orange", "red"];
+
+    // loop through our density intervals and generate a label with a colored square for each interval
+    for (var i = 0; i < grades.length; i++) {
+        div.innerHTML +=
+            '<i style="background:' + labels[i] + '">&nbsp;&nbsp;&nbsp;</i> ' +
+            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+}
+
+return div;
+};
+
+legend.addTo(myMap);
 }
